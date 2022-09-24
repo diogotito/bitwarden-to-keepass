@@ -64,7 +64,7 @@ def bitwarden_to_keepass(args):
                 except Exception as e:
                     if 'already exists' in str(e):
                         is_duplicate_title = True
-                        continue
+                        break
                     raise
 
             totp_secret, totp_settings = bw_item.get_totp()
