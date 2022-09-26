@@ -74,7 +74,15 @@ def bitwarden_to_keepass(args):
                 entry.set_custom_property('TOTP Seed', totp_secret)
                 entry.set_custom_property('TOTP Settings', totp_settings)
 
-            android_apps = ios_apps = extra_urls = 0
+            ##########################################################################
+            # HANDLE URIS
+            ##########################################################################
+
+            add_android_app, add_ios_app, add_extra_url = map(
+                lambda prop, count=0:
+                    lambda uri:
+                        entry.set_custom_property(f'{prop} #{count := count + 1}', uri),
+                ("Android app", "iOS app", "Extra URL"))
 
             n_uris = len(bw_item.get_uris())
             for j, uri in enumerate(bw_item.get_uris()):
@@ -82,21 +90,13 @@ def bitwarden_to_keepass(args):
                 uri = uri['uri']
 
                 if uri.startswith('androidapp://'):
-                    # Set up KeePassDX's autofill for this Android app identifier
-                    prop_name = "AndroidApp"
-                    if android_apps > 0:
-                        prop_name += f"_{android_apps}"
-                    android_apps += 1
-                    entry.set_custom_property(prop_name, uri[13:])
+                    add_android_app(uri)
                 elif uri.startswith('iosapp://'):
-                    #XXX Maybe properly set up autofill for a macOS/iPhone/iPad KeePass-compatible app like StrongBox or Keepassium
-                    ios_apps += 1
-                    entry.set_custom_property(f'iOS app #{ios_apps}', uri[9:])
+                    add_ios_app(uri)
                 elif entry.url is None:
                     entry.url = uri
                 else:
-                    extra_urls += 1
-                    entry.set_custom_property(f'URL_{extra_urls}', uri)
+                    add_extra_url(uri)
 
 
             for i, field in enumerate(bw_item.get_custom_fields()):
