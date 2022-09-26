@@ -41,12 +41,13 @@ def bitwarden_to_keepass(args):
     items = subprocess.check_output([args.bw_path, 'list', 'items', '--session', args.bw_session], encoding='utf8')
     items = json.loads(items)
     logging.info(f'Starting to process {len(items)} items.')
-    for item in items:
+    for i, item in enumerate(items):
         if item['type'] in [ItemTypes.CARD, ItemTypes.IDENTITY]:
             logging.warning(f'Skipping credit card or identity item "{item["name"]}".')
             continue
 
         bw_item = Item(item)
+        logging.info(f'Processing #{i:3d} / {len(items)}: "{bw_item.get_name()}"')
 
         is_duplicate_title = False
         try:
@@ -69,12 +70,15 @@ def bitwarden_to_keepass(args):
 
             totp_secret, totp_settings = bw_item.get_totp()
             if totp_secret and totp_settings:
+                logging.info("  > TOTP")
                 entry.set_custom_property('TOTP Seed', totp_secret)
                 entry.set_custom_property('TOTP Settings', totp_settings)
 
             android_apps = ios_apps = extra_urls = 0
 
-            for uri in bw_item.get_uris():
+            n_uris = len(bw_item.get_uris())
+            for j, uri in enumerate(bw_item.get_uris()):
+                logging.info(f'  > URI {j + 1} / {n_uris}')
                 uri = uri['uri']
 
                 if uri.startswith('androidapp://'):
@@ -95,10 +99,12 @@ def bitwarden_to_keepass(args):
                     entry.set_custom_property(f'URL_{extra_urls}', uri)
 
 
-            for field in bw_item.get_custom_fields():
+            for i, field in enumerate(bw_item.get_custom_fields()):
+                logging.info(f'  > Custom Field #{j}: "{field["name"]}"')
                 entry.set_custom_property(field['name'], field['value'])
-
-            for attachment in bw_item.get_attachments():
+            
+            for attachment in enumerate(bw_item.get_attachments()):
+                logging.info(f'  > Attachment #{j}: "{field["name"]}"')
                 attachment_raw = subprocess.check_output([
                     args.bw_path, 'get', 'attachment', attachment['id'], '--raw', '--itemid', bw_item.get_id(),
                     '--session', args.bw_session,
