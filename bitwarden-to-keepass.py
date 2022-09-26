@@ -72,9 +72,28 @@ def bitwarden_to_keepass(args):
                 entry.set_custom_property('TOTP Seed', totp_secret)
                 entry.set_custom_property('TOTP Settings', totp_settings)
 
+            android_apps = ios_apps = extra_urls = 0
+
             for uri in bw_item.get_uris():
-                entry.url = uri['uri']
-                break # todo append additional uris to notes?
+                uri = uri['uri']
+
+                if uri.startswith('androidapp://'):
+                    # Set up KeePassDX's autofill for this Android app identifier
+                    prop_name = "AndroidApp"
+                    if android_apps > 0:
+                        prop_name += f"_{android_apps}"
+                    android_apps += 1
+                    entry.set_custom_property(prop_name, uri[13:])
+                elif uri.startswith('iosapp://'):
+                    #XXX Maybe properly set up autofill for a macOS/iPhone/iPad KeePass-compatible app like StrongBox or Keepassium
+                    ios_apps += 1
+                    entry.set_custom_property(f'iOS app #{ios_apps}', uri[9:])
+                elif entry.url is None:
+                    entry.url = uri
+                else:
+                    extra_urls += 1
+                    entry.set_custom_property(f'URL_{extra_urls}', uri)
+
 
             for field in bw_item.get_custom_fields():
                 entry.set_custom_property(field['name'], field['value'])
